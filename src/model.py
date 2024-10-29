@@ -6,18 +6,17 @@ def sigmoid(z):
     return 1 / (1 + np.exp(-z))
 
 
+# One-vs-Rest Logistic Regression Classifier
 class OneVsRestLR:
     def __init__(self, learning_rate=0.01, n_iterations=100):
-        self.classes = None
         self.learning_rate = learning_rate
         self.n_iterations = n_iterations
-        self.params_dict = {}  # To store weights and biases for each class
+        self.params_dict = dict()
+        self.classes = list()
 
-    def _binary_logistic_regression(self, X, y):
+    def _binary_logistic_regression(self, X, y, weights, bias):
         """Trains a binary logistic regression classifier for one class."""
         num_samples, num_features = X.shape
-        weights = np.zeros(num_features)
-        bias = 0
 
         # Gradient descent
         for i in range(self.n_iterations):
@@ -46,8 +45,18 @@ class OneVsRestLR:
             # Create binary labels (1 for the current class, 0 for others)
             binary_y = np.where(y == c, 1, 0)
 
+            # Initialize weights and bias if not provided in params_dict
+            if c not in self.params_dict:
+                self.params_dict[c] = {
+                    'weights': np.zeros(X.shape[1]),
+                    'bias': 0
+                }
+
+            weights = self.params_dict[c]['weights']
+            bias = self.params_dict[c]['bias']
+
             # Train binary logistic regression
-            weights, bias = self._binary_logistic_regression(X, binary_y)
+            weights, bias = self._binary_logistic_regression(X, binary_y, weights, bias)
 
             # Store weights and bias in the dictionary with the class label as key
             self.params_dict[c] = {
@@ -55,8 +64,11 @@ class OneVsRestLR:
                 'bias': bias
             }
 
-    def predict(self, X):
+    def predict(self, X, y):
         """Predicts class labels for the input data."""
+        # Extract unique classes from the labels
+        self.classes = np.unique(y)
+
         # Collect probabilities from each binary classifier
         class_probabilities = np.zeros((X.shape[0], len(self.classes)))
 
