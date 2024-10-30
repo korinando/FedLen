@@ -51,7 +51,7 @@ class Client:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Client for federated learning.')
-    parser.add_argument('--labels', type=int, nargs='+', default=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+    parser.add_argument('--labels', '-lb', type=int, nargs='+', default=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
                         help='List of labels to use for training.')
     args = parser.parse_args()
 

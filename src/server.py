@@ -1,4 +1,5 @@
 import sys
+import argparse
 import socketio
 import numpy as np
 from model import OneVsRestLR
@@ -112,7 +113,12 @@ class Server:
 
 
 if __name__ == "__main__":
-    fl_server = Server(num_clients=2, communication_rounds=3)
+    parser = argparse.ArgumentParser(description='Server for federated learning.')
+    parser.add_argument('--num_clients', '-cl', type=int, required=True, help='Number of clients to connect.')
+    parser.add_argument('--communication_rounds', '-r', type=int, required=True, help='Number of communication rounds.')
+    args = parser.parse_args()
+
+    fl_server = Server(num_clients=args.num_clients, communication_rounds=args.communication_rounds)
     fl_server.run_server()
 
 
