@@ -23,6 +23,7 @@ class Client:
         await self.sio.connect(self.server)
 
     def register_handle(self):
+        # Register the threads
         self.sio.on("connection_received", self.connection_received)
         self.sio.on("start_training", self.start_training)
         self.sio.on("end_session", self.end_session)
@@ -31,6 +32,7 @@ class Client:
         print(f"Server at {self.server} returned success")
 
     async def start_training(self, global_model):
+        # Starting Clients training
         self.model.params_dict = {int(label): decode(param) for label, param in global_model.items() if
                                   int(label) in self.labels}
         print("Starting training")
@@ -38,11 +40,13 @@ class Client:
         await self.send_updates()
 
     async def send_updates(self):
+        # Send update to Server
         model_weights = {int(label): encode_data(param) for label, param in self.model.params_dict.items()}
         print("Sending updates to server")
         await self.sio.emit("fl_update", data=model_weights)
 
     async def end_session(self, data):
+        # Ending sessions
         model_weights = {int(label): decode(param) for label, param in data.items()}
         self.model.params_dict = model_weights
         print("Ending session")
