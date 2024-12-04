@@ -12,7 +12,7 @@ from sklearn.metrics import accuracy_score
 
 class Server:
     def __init__(self, num_clients, communication_rounds):
-        self.sio = socketio.AsyncServer(async_mode="aiohttp", ping_timeout=120)
+        self.sio = socketio.AsyncServer(async_mode="aiohttp", ping_timeout=360)
         self.app = web.Application()
         self.sio.attach(self.app)
         self.register_handle()
@@ -31,6 +31,7 @@ class Server:
         self.pool = ThreadPoolExecutor(max_workers=4)
 
     def register_handle(self):
+        # Register the threads
         self.sio.on("connect", self.connect)
         self.sio.on("fl_update", self.fl_update)
 
@@ -39,6 +40,7 @@ class Server:
         await self.sio.enter_room(sid, self.training_room)
 
         async def training_callback():
+            # Callback function to start training when all clients are connected
             if len(self.clients_connected) == self.num_clients:
                 print("Connect to", self.num_clients, "clients, now begin to train")
                 await self.start_round()
@@ -55,20 +57,24 @@ class Server:
         web.run_app(self.app, host=host, port=port)
 
     def evaluate(self):
+        # Evaluate the global model
         y_pred = self.global_model.predict(self.X_test, self.y_test)
         print("Accuracy score:", accuracy_score(self.y_test, y_pred))
 
     async def fl_update(self, sid, data):
+        # Update the global model with the client's parameters
         decoded_data = {int(label): decode(param) for label, param in data.items()}
         self.params_dicts.append(decoded_data)
 
         self.clients_pending.remove(sid)
+        # Check if all clients have sent their updates, then average the weights
         if not self.clients_pending and len(self.params_dicts) == self.num_clients:
             self.average_weights = average_params(*self.params_dicts)
             loop = asyncio.get_event_loop()
             asyncio.ensure_future(self.async_consume(loop))
 
     def apply_updates(self):
+        # Apply the averaged weights to the global model
         print("Applying updates to global model")
         self.global_model.params_dict = self.average_weights
         self.evaluate()
@@ -78,6 +84,7 @@ class Server:
         loop.create_task(self.end_round())
 
     async def start_round(self):
+        # Starting Communication Rounds
         print(f'Starting round {self.round + 1}')
         self.clients_pending = self.clients_connected.copy()
         self.params_dicts = list()
@@ -89,6 +96,7 @@ class Server:
         )
 
     async def end_round(self):
+        # Ending a Round
         print("Ending round")
         self.round += 1
         if self.round < self.max_rounds:

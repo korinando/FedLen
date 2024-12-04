@@ -6,6 +6,7 @@ import numpy as np
 from utils import *
 from model import OneVsRestLR
 import asyncio
+from sklearn.metrics import accuracy_score
 
 
 class Client:
@@ -13,8 +14,9 @@ class Client:
         self.server = address
         self.sio = socketio.AsyncClient()
         self.labels = labels
-        (X, y), _ = get_data()
-        self.X_train, self.y_train = dataset_split(X, y, self.labels)
+        (X_train, y_train), (X_test, y_test) = get_data()
+        self.X_train, self.y_train = dataset_split(X_train, y_train, self.labels)
+        self.X_test, self.y_test = dataset_split(X_test, y_test, self.labels)
         self.model = OneVsRestLR()
         self.register_handle()
         self.stop_event = asyncio.Event()
@@ -31,12 +33,18 @@ class Client:
     async def connection_received(self):
         print(f"Server at {self.server} returned success")
 
+    def evaluate(self):
+        # Evaluate the global model
+        y_pred = self.model.predict(self.X_test, self.y_test)
+        print("Accuracy score:", accuracy_score(self.y_test, y_pred))
+
     async def start_training(self, global_model):
         # Starting Clients training
         self.model.params_dict = {int(label): decode(param) for label, param in global_model.items() if
                                   int(label) in self.labels}
         print("Starting training")
         self.model.fit(self.X_train, self.y_train)
+        self.evaluate()
         await self.send_updates()
 
     async def send_updates(self):
